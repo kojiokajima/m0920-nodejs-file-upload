@@ -5,6 +5,8 @@ const session = require('express-session')
 const MongoDBStore = require('connect-mongodb-session')(session);
 const csrf = require('csurf')
 const flash = require('connect-flash')
+const {v4: uuidv4} = require('uuid')
+const multer = require('multer')
 require('dotenv').config()
 
 const adminRouters = require('./routes/admin');
@@ -13,6 +15,14 @@ const authRouters = require('./routes/auth')
 
 const errorController = require('./controllers/error');
 const User = require('./models/User')
+
+//--------------------Setup MINE Type--------------------
+const MINE_TYPE_MAP = {
+    "image/jpg" : "jpg",
+    "imagejpeg" : "jpeg",
+    "image/png" : "png",
+    "image/gif" : "gif",
+}
 
 //--------------------Setups--------------------
 const app = express();
@@ -23,12 +33,32 @@ const store = new MongoDBStore({
 const csrfProtection = csrf()
 app.use(express.urlencoded({extended:false}));
 
+// parse the request body into readable data (from multipartform)
+app.use(multer({
+    limits: 5000000, // bytes
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, 'uploads/images')
+        },
+        filename: (req, file, cb) => {
+            const ext = MINE_TYPE_MAP[file.mimetype]
+            cb(null, uuidv4() + '.' + ext) // e.g.) smdcaoiheorbv.jpg
+        }
+    }),
+    fileFilter: (req, file, cb) => {
+        const isValid = !!MINE_TYPE_MAP[file.mimetype]
+        let error = isValid ? null : new Error("In valid MINE type")
+        cb(error, isValid)
+    }
+}).single('image')) // --> inputのname。 edit-product.ejsのやつ
+
 //app.set = allows us to set any values globally on our express application
 app.set('view engine', 'ejs');
 //views is set to default path of views but I am just implicitly showing
 app.set('views','views');
 
 //serve file statically
+app.use('/uploads/images', express.static(path.join(__dirname, 'uploads', 'images')))
 app.use(express.static(path.join(__dirname, 'public')))
 app.use(session({
     secret: process.env.SESSION_KEY,
