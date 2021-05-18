@@ -1,4 +1,5 @@
 const Product = require('../models/Products')
+const Order = require('../models/Orders')
 
 exports.getProducts = (req, res, next) => {
   // const isLoggedIn = req.get('Cookie').split(' ')[2].split('=')[1] === 'true'
@@ -48,14 +49,59 @@ exports.postCart = (req, res, next) => {
       return req.user.addToCart(product)
     })
     .then(() => {
-        res.redirect('/')
+      res.redirect('/')
     })
     .catch((err) => console.log(err))
 }
 
-exports.postCartDeleteProduct = (req,res,next) => {
-    const prodId = req.body.productId
-    req.user.removeFromCart(prodId).then(() => {
-        res.redirect('/cart')
-    }).catch(err => console.log(err))
+exports.postCartDeleteProduct = (req, res, next) => {
+  const prodId = req.body.productId
+  req.user
+    .removeFromCart(prodId)
+    .then(() => {
+      res.redirect('/cart')
+    })
+    .catch((err) => console.log(err))
+}
+
+exports.postOrder = (req, res, next) => {
+  // console.log('user: ',req.user)
+  req.user
+    .populate('cart.items.productId')
+    .execPopulate()
+    .then(user => {
+      const products = user.cart.items.map(item => {
+        return {
+          product: { ...item.productId._doc },
+          quantity: item.quantity
+        }
+      })
+
+      const order = new Order({
+        products: products,
+        user: {
+          email: req.user.email,
+          userId: req.user //mongoose will only pull out the _id
+        }
+      })
+
+      return order.save()
+    })
+    .then(() => {
+      return req.user.clearCart()
+    })
+    .then(() => {
+      res.redirect('/orders')
+    })
+    .catch((err) => console.log(err))
+}
+
+exports.getOrders = (req, res, next) => {
+  Order.find({ 'user.userId': req.user._id }).then((order) => {
+    res.render('shop/orders', {
+      pageTitle: 'Your Order',
+      path: '/orders',
+      orders: order
+    })
+  }).catch(err => console.log(err))
 }

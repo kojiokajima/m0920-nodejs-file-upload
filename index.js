@@ -69,7 +69,6 @@ app.use(session({
 app.use(csrfProtection)
 app.use(flash())
 
-// Dummy Auth
 app.use((req,res,next) => {
     if(!req.session.user){
         return next()
