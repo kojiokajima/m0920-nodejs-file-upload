@@ -5,7 +5,7 @@ const session = require('express-session')
 const MongoDBStore = require('connect-mongodb-session')(session);
 const csrf = require('csurf')
 const flash = require('connect-flash')
-const {v4: uuidv4} = require('uuid')
+const { v4: uuidv4 } = require('uuid')
 const multer = require('multer')
 require('dotenv').config()
 
@@ -16,12 +16,12 @@ const authRouters = require('./routes/auth')
 const errorController = require('./controllers/error');
 const User = require('./models/User')
 
-//--------------------Setup MINE Type--------------------
-const MINE_TYPE_MAP = {
+//--------------------Setup MIME Type-----------
+const MIME_TYPE_MAP = {
     "image/jpg" : "jpg",
-    "imagejpeg" : "jpeg",
+    "image/jpeg" : "jpeg",
     "image/png" : "png",
-    "image/gif" : "gif",
+    "image/gif" : "gif"
 }
 
 //--------------------Setups--------------------
@@ -33,24 +33,24 @@ const store = new MongoDBStore({
 const csrfProtection = csrf()
 app.use(express.urlencoded({extended:false}));
 
-// parse the request body into readable data (from multipartform)
+//parse the request body into readable data (from multipartform)
 app.use(multer({
-    limits: 5000000, // bytes
+    limits: 5000000, //bytes
     storage: multer.diskStorage({
-        destination: (req, file, cb) => {
+        destination: (req ,file, cb) => {
             cb(null, 'uploads/images')
         },
-        filename: (req, file, cb) => {
-            const ext = MINE_TYPE_MAP[file.mimetype]
-            cb(null, uuidv4() + '.' + ext) // e.g.) smdcaoiheorbv.jpg
+        filename: (req ,file, cb) => {
+            const ext = MIME_TYPE_MAP[file.mimetype]
+            cb(null, uuidv4() + '.' + ext) //asfasgwe23r23fse43tf.jpg
         }
     }),
-    fileFilter: (req, file, cb) => {
-        const isValid = !!MINE_TYPE_MAP[file.mimetype]
-        let error = isValid ? null : new Error("In valid MINE type")
+    fileFilter: (req,file,cb) => {
+        const isValid = !!MIME_TYPE_MAP[file.mimetype]
+        let error = isValid ? null : new Error('Invalid MIME type')
         cb(error, isValid)
     }
-}).single('image')) // --> inputのname。 edit-product.ejsのやつ
+}).single('image'))
 
 //app.set = allows us to set any values globally on our express application
 app.set('view engine', 'ejs');
@@ -69,6 +69,19 @@ app.use(session({
 app.use(csrfProtection)
 app.use(flash())
 
+app.use((req,res,next) => {
+    if(!req.session.user){
+        return next()
+    }
+    User.findById(req.session.user._id).then(user => {
+        if(!user){
+            return next()
+        }
+        req.user = user
+        next()
+    }).catch(err => console.log(err))
+
+})
 
 app.use((req,res,next) => {
     res.locals.csrfToken = req.csrfToken()

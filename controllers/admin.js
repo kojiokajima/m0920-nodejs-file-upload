@@ -14,14 +14,13 @@ exports.getAddProduct = (req, res, next) => {
 exports.postAddProduct = (req, res, next) => {
   const errors = validationResult(req)
   if(!errors.isEmpty()){
-    return res.status(422).render('admin/product', {
+    return res.status(422).render('admin/edit-product', {
       pageTitle: 'Add Product',
-      path: '.admin/add-product',
+      path: '/admin/add-product',
       editing: false,
       errorMessage: errors.array()[0].msg
     })
   }
-
 
   const product = new Product({
     title: req.body.title,
@@ -59,28 +58,28 @@ exports.postEditProduct = (req, res, next) => {
   const updateDesc = req.body.description
   const updatedImage = req.file?.path
 
+  console.log(updatedImage)
 
   const errors = validationResult(req)
   if(!errors.isEmpty()){
-    return res.status(422).render('admin/product', {
+    return res.status(422).render('admin/edit-product', {
       pageTitle: 'Edit Product',
-      path: '.admin/add-product',
+      path: '/admin/edit-product',
       editing: true,
       errorMessage: errors.array()[0].msg
     })
   }
-
 
   Product.findById(prodId).then(product => {
     product.title = updatedTitle
     product.price = updatedPrice
     product.description = updateDesc
     if(updatedImage){
-      // delete previous image from the backend
+      //delete previous image from the backend
       fileHelper.deleteFile(product.image)
       product.image = updatedImage
     }else{
-      // product.image = product.image
+      console.log(product.image)
     }
     return product.save()
   })
